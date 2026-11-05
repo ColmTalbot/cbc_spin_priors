@@ -13,13 +13,14 @@ license-files = ["LICENSE"]
 authors = [{name = "Colm Talbot"}]
 # the array-API bilby (bilby.compat.utils)
 # array_api_compat detects the namespace for the generic array API path
-dependencies = ["bilby>=3.0.0", "numpy", "scipy", "array_api_compat>=1.11"]
+dependencies = ["bilby>=3.0.0b1", "numpy", "scipy", "array_api_compat>=1.11"]
 
 [project.optional-dependencies]
 # compiled kernels for the in-plane CDFs, much faster than the numpy fallback
 fast = ["numba"]
 # torch and jax are also exercised by the tests if installed
-test = ["pytest", "array_api_strict"]
+# astropy is needed by BBHPriorDict (bilby.gw.prior); lalsuite is not
+test = ["pytest", "pytest-cov", "array_api_strict", "astropy"]
 # examples/run_injection.py also needs lalsuite and dynesty
 examples = ["lalsuite", "dynesty", "matplotlib"]
 
@@ -29,3 +30,16 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--import-mode=importlib"
+
+[tool.coverage.run]
+source_pkgs = ["cbc_spin_priors"]
+relative_files = true
+
+[tool.coverage.report]
+# numba-only kernels: compiled, so not traced, and absent without numba;
+# test_numba_matches_numpy checks them against the numpy implementation
+exclude_also = ["if _numba is not None:"]
+
+[tool.coverage.paths]
+# the tests run against the installed package
+source = ["src/cbc_spin_priors", "*/site-packages/cbc_spin_priors"]

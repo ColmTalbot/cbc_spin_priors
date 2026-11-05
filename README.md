@@ -36,7 +36,7 @@ Limitations of the generic path:
 pip install ".[fast,test]"
 ```
 
-- **bilby:** the package needs a bilby with the array-API interface (`bilby.compat.utils`), version 3.0.0 or later.
+- **bilby:** the package needs a bilby with the array-API interface (`bilby.compat.utils`), version 3.0.0b1 or later.
 - **numba (`fast` extra):** compiles the `Chi2` and in-plane kernels. Without it, the same code runs as plain Python and numpy, which is much slower.
 
 ## Use
