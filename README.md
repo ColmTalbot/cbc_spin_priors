@@ -1,5 +1,7 @@
 # cbc_spin_priors
 
+[![tests](https://github.com/ColmTalbot/cbc_spin_priors/actions/workflows/tests.yml/badge.svg)](https://github.com/ColmTalbot/cbc_spin_priors/actions/workflows/tests.yml) [![codecov](https://codecov.io/gh/ColmTalbot/cbc_spin_priors/graph/badge.svg)](https://codecov.io/gh/ColmTalbot/cbc_spin_priors)
+
 Spin priors for compact binary coalescences in [bilby](https://git.ligo.org/lscsoft/bilby).
 
 All of them reproduce spins with uniform magnitudes up to `amax` (default 0.99) and isotropic orientations. They differ only in which parameters the sampler sees.
