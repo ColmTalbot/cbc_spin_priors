@@ -20,31 +20,67 @@ from . import _aligned_xp, _xp
 
 __all__ = ["ChiEffQ", "Chi1", "Chi2"]
 
+#: The default maximum spin magnitude.
 AMAX = 0.99
 
 
 class ChiEffQ(ConditionalBasePrior):
     r"""
-    The conditional prior for chi effective given mass ratio as derived in
-    `Callister (2021) <https://arxiv.org/abs/2104.09508>`_ for a fixed
-    maximum spin magnitude. The CDF is evaluated in closed form (via the
-    dilogarithm) and inverted with a safeguarded Newton iteration.
-    :code:`qmin` and :code:`qmax` are metadata only.
+    The conditional prior for :math:`\chi_\mathrm{eff}` given the mass ratio
+    :math:`q` implied by uniform spin magnitudes up to :math:`a_{\max}` and
+    isotropic orientations, as derived in
+    `Callister (2021) <https://arxiv.org/abs/2104.09508>`_.
 
-    Numpy arrays and Python scalars use compiled numba kernels, other array
-    API namespaces use :mod:`cbc_spin_priors._aligned_xp`.
+    The CDF is evaluated in closed form (via the dilogarithm) and inverted
+    with a safeguarded Newton iteration. Numpy arrays and Python scalars use
+    compiled numba kernels, other array API namespaces use
+    :mod:`cbc_spin_priors._aligned_xp`.
+
+    With :math:`\chi_1 = (1 + q)\chi_\mathrm{eff} - q\chi_2`, the density is
+
+    .. math::
+
+        p(\chi_\mathrm{eff} | q) = \frac{1 + q}{4 a_{\max}^2} \int d\chi_2
+        \ln\frac{a_{\max}}{|\chi_1|} \ln\frac{a_{\max}}{|\chi_2|}
+
+    over :math:`|\chi_1|, |\chi_2| \leq a_{\max}`. In closed form, with
+    :math:`x = |\chi_\mathrm{eff}|`, :math:`P = a_{\max} / (1 + q)`,
+    :math:`s = q a_{\max} / (1 + q)` and :math:`\Delta = P - s`,
 
     .. math::
 
         p(\chi_\mathrm{eff} | q) = \begin{cases}
-            (1 + q) (2 - \ln q) / (2 a_{\max}) & \chi_\mathrm{eff} = 0 \\
-            ... & |\chi_\mathrm{eff}| < a_{\max} \frac{1 - q}{1 + q}, |\chi_\mathrm{eff}| < q a_{\max} / (1 + q) \\
-            ... & |\chi_\mathrm{eff}| < a_{\max} \frac{1 - q}{1 + q}, |\chi_\mathrm{eff}| > q a_{\max} / (1 + q) \\
-            ... & |\chi_\mathrm{eff}| > a_{\max} \frac{1 - q}{1 + q}, |\chi_\mathrm{eff}| < q a_{\max} / (1 + q) \\
-            ... & |\chi_\mathrm{eff}| > a_{\max} \frac{1 - q}{1 + q}, |\chi_\mathrm{eff}| > q a_{\max} / (1 + q), |\chi_\mathrm{eff}| \leq a_{\max} / (1 + q) \\
-            ... & |\chi_\mathrm{eff}| > a_{\max} / (1 + q), |\chi_\mathrm{eff}| < a_{\max} \\
-            0 & |\chi_\mathrm{eff}| \geq a_{\max}
+            \dfrac{(1 + q)(2 - \ln q)}{2 a_{\max}} & x = 0 \\[1ex]
+            \dfrac{1}{4P}\left[4 - 2\ln q - \ln\left|\dfrac{x^2}{s^2} - 1\right|
+            + \dfrac{x}{s}\left(\ln\left|\dfrac{x - s}{x + s}\right|
+            + \mathrm{Li}_2\left(-\dfrac{s}{x}\right)
+            - \Re\,\mathrm{Li}_2\left(\dfrac{s}{x}\right)\right)\right]
+            & 0 < x < \Delta \\[1ex]
+            \dfrac{1}{4Ps}\Big[2(a_{\max} - x) + \Delta\ln q
+            + (x - s)\ln\left|\dfrac{x}{s} - 1\right|
+            + (x - P)\ln\left|\dfrac{x}{P} - 1\right| & \\
+            \quad + x\ln\dfrac{P}{x}\left(\ln\left|\dfrac{x}{P} - 1\right| - \ln q\right)
+            + x\left(\mathrm{Li}_2\left(1 - \dfrac{P}{x}\right)
+            - \Re\,\mathrm{Li}_2\left(\dfrac{s}{x}\right)\right)\Big]
+            & \Delta \leq x < a_{\max} \\[1ex]
+            0 & x \geq a_{\max}
         \end{cases}
+
+    Parameters
+    ==========
+    amax: float
+        The maximum spin magnitude.
+    qmin, qmax: float
+        The range of mass ratios. These are stored with the prior but do not
+        affect the density.
+    name: str
+        The parameter name, :code:`chi_eff` by default.
+    latex_label, unit, boundary:
+        As for :code:`bilby.core.prior.Prior`.
+
+    Notes
+    =====
+    The required variable is :code:`mass_ratio`.
     """
 
     def __init__(self, amax, qmin, qmax, name="chi_eff", latex_label=None, unit=None, boundary=None):
@@ -489,6 +525,23 @@ class Chi2(ConditionalBasePrior):
         p(\chi_2 | q, \chi_\mathrm{eff}) \propto
         \ln\left(\frac{|\chi_2|}{a_{\max}}\right)
         \ln\left(\frac{|(1 + q)\chi_{\mathrm{eff}} - q\chi_2|}{a_{\max}}\right)
+
+    on the range where both :math:`|\chi_2|` and
+    :math:`|\chi_1| = |(1 + q)\chi_\mathrm{eff} - q\chi_2|` are at most
+    :math:`a_{\max}`.
+
+    Parameters
+    ==========
+    amax: float
+        The maximum spin magnitude.
+    name: str
+        The parameter name, :code:`chi_2` by default.
+    latex_label, unit, boundary:
+        As for :code:`bilby.core.prior.Prior`.
+
+    Notes
+    =====
+    The required variables are :code:`mass_ratio` and :code:`chi_eff`.
     """
 
     def __init__(self, amax, name="chi_2", latex_label=None, unit=None, boundary=None):
@@ -562,6 +615,27 @@ class Chi2(ConditionalBasePrior):
 
 
 class Chi1(ConditionalDeltaFunction):
+    r"""
+    The aligned spin of the more massive object as a conditional delta
+    function, :math:`\chi_1 = (1 + q)\chi_\mathrm{eff} - q\chi_2`.
+
+    With :code:`ChiEffQ` and :code:`Chi2` this reproduces the aligned
+    components of the standard prior. :code:`is_fixed` is :code:`False`, so
+    bilby treats :code:`chi_1` as a search parameter and passes its value to
+    the likelihood.
+
+    Parameters
+    ==========
+    name: str
+        The parameter name, :code:`chi_1` by default.
+    latex_label, unit, boundary:
+        As for :code:`bilby.core.prior.Prior`.
+
+    Notes
+    =====
+    The required variables are :code:`chi_eff`, :code:`mass_ratio` and
+    :code:`chi_2`.
+    """
 
     def __init__(self, name="chi_1", latex_label=None, unit=None, boundary="periodic"):
         super().__init__(
