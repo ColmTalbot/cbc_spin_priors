@@ -26,7 +26,7 @@ jobs:
           - {python: "3.11", label: no numba, extras: "test"}
           - {python: "3.13", label: numba, extras: "fast,test"}
           - {python: "3.13", label: no numba, extras: "test"}
-          - {python: "3.13", label: torch jax, extras: "fast,test", backends: true}
+          - {python: "3.13", label: torch jax array API, extras: "fast,test", backends: true}
           - {python: "3.13", label: bilby main, extras: "fast,test",
              bilby: "bilby @ git+https://github.com/bilby-dev/bilby.git@main"}
     env:
@@ -38,11 +38,15 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
           cache-dependency-path: pyproject.toml
+      # with bilby's and scipy's array API support switched on, as users of
+      # other array libraries would run it; bilby then also needs orng
       - name: Install optional array backends
         if: matrix.backends
         run: |
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-          python -m pip install jax
+          python -m pip install jax orng
+          echo "BILBY_ARRAY_API=1" >> "$GITHUB_ENV"
+          echo "SCIPY_ARRAY_API=1" >> "$GITHUB_ENV"
       - name: Install bilby from git
         if: matrix.bilby
         run: python -m pip install "${{ matrix.bilby }}"
