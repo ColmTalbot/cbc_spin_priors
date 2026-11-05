@@ -3,13 +3,14 @@ Tests for cbc_spin_priors.aligned.
 """
 
 import numpy as np
-from pytest import fixture
+from pytest import fixture, mark
 from scipy.stats import ks_1samp, uniform
 
 from bilby.core.prior import ConditionalPriorDict
 from bilby.gw.conversion import convert_to_lal_binary_black_hole_parameters
 from bilby.gw.prior import ConditionalChiInPlane, UniformInComponentsMassRatio
 
+from cbc_spin_priors import aligned
 from cbc_spin_priors.aligned import AMAX, Chi1, Chi2, ChiEffQ
 
 THRESHOLD = 1e-3
@@ -238,6 +239,7 @@ def test_chi_eff_matches_interpolated_reference():
     assert np.max(np.abs(prior.rescale(uu, mass_ratio=qs) - old_values)[bulk]) < 1e-3
 
 
+@mark.skipif(aligned._numba is None, reason="times the compiled kernels")
 def test_chi_eff_timing_against_interpolated_reference():
     from timeit import timeit
 
@@ -256,6 +258,6 @@ def test_chi_eff_timing_against_interpolated_reference():
         rescale_old=timeit(lambda: reference.rescale(uu, mass_ratio=qs), number=5) / 5,
     )
     print({key: f"{value * 1e3:.2f} ms" for key, value in timings.items()})
-    # generous bounds, also hold without numba
+    # generous bounds
     assert timings["cdf_new"] < 100 * timings["cdf_old"] + 0.5
     assert timings["rescale_new"] < 100 * timings["rescale_old"] + 0.5

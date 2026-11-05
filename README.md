@@ -1,5 +1,7 @@
 # cbc_spin_priors
 
+[![tests](https://github.com/ColmTalbot/cbc_spin_priors/actions/workflows/tests.yml/badge.svg)](https://github.com/ColmTalbot/cbc_spin_priors/actions/workflows/tests.yml) [![codecov](https://codecov.io/gh/ColmTalbot/cbc_spin_priors/graph/badge.svg)](https://codecov.io/gh/ColmTalbot/cbc_spin_priors)
+
 Spin priors for compact binary coalescences in [bilby](https://git.ligo.org/lscsoft/bilby).
 
 All of them reproduce spins with uniform magnitudes up to `amax` (default 0.99) and isotropic orientations. They differ only in which parameters the sampler sees.
@@ -38,7 +40,7 @@ Limitations of the generic path:
 pip install ".[fast,test]"
 ```
 
-- **bilby:** the package needs a bilby with the array-API interface (`bilby.compat.utils`), version 3.0.0 or later.
+- **bilby:** the package needs a bilby with the array-API interface (`bilby.compat.utils`), version 3.0.0b1 or later.
 - **numba (`fast` extra):** compiles the `Chi2` and in-plane kernels. Without it, the same code runs as plain Python and numpy, which is much slower.
 
 ## Use

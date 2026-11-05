@@ -1,0 +1,93 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # weekly, to catch breakage from bilby main
+  schedule:
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: py${{ matrix.python }} ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.bilby != null }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {python: "3.11", label: numba, extras: "fast,test"}
+          - {python: "3.11", label: no numba, extras: "test"}
+          - {python: "3.13", label: numba, extras: "fast,test"}
+          - {python: "3.13", label: no numba, extras: "test"}
+          - {python: "3.13", label: torch jax array API, extras: "fast,test", backends: true}
+          - {python: "3.13", label: bilby main, extras: "fast,test",
+             bilby: "bilby @ git+https://github.com/bilby-dev/bilby.git@main"}
+    env:
+      COVERAGE_FILE: coverage-${{ strategy.job-index }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      # with bilby's and scipy's array API support switched on, as users of
+      # other array libraries would run it; bilby then also needs orng
+      - name: Install optional array backends
+        if: matrix.backends
+        run: |
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install jax orng
+          echo "BILBY_ARRAY_API=1" >> "$GITHUB_ENV"
+          echo "SCIPY_ARRAY_API=1" >> "$GITHUB_ENV"
+      - name: Install bilby from git
+        if: matrix.bilby
+        run: python -m pip install "${{ matrix.bilby }}"
+      - name: Install package
+        run: python -m pip install ".[${{ matrix.extras }}]"
+      - name: Check numba
+        run: |
+          python -c "import cbc_spin_priors.inplane as m; print('numba:', m._numba is not None)"
+      - name: Run tests
+        run: python -m pytest -p no:cacheprovider -ra --cov --cov-report=
+      - uses: actions/upload-artifact@v4
+        if: always() && !matrix.bilby
+        with:
+          name: coverage-data-${{ strategy.job-index }}
+          path: ${{ env.COVERAGE_FILE }}
+          if-no-files-found: ignore
+
+  coverage:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install coverage
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-data-*
+          merge-multiple: true
+          path: coverage-data
+      # the numba and no-numba runs cover different lines, so combine them
+      - name: Combine coverage
+        run: |
+          python -m coverage combine coverage-data/*
+          python -m coverage xml
+          python -m coverage report --show-missing
+          python -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+      - uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
