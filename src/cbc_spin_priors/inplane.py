@@ -936,7 +936,35 @@ def angle_rescale(uu, r2, rho, chi_1, mass_ratio, amax=AMAX, xp=None):
 
 
 def in_plane_from_total(rho, r2, theta, mass_ratio, xp=None):
-    """Return (chi_1_in_plane, phi_12) from |S|, |v_2| and the angle of v_2 relative to S."""
+    r"""
+    Return :code:`(chi_1_in_plane, phi_12)` from :math:`|S|`, :math:`|v_2|`
+    and the angle of :math:`v_2` relative to :math:`S`.
+
+    With :math:`S` along the x axis, :math:`a = (1 + q^2)|S|` and
+    :math:`d = q^2 |v_2|`, the primary in-plane spin is
+    :math:`v_1 = a - d e^{i\theta}`.
+
+    Parameters
+    ==========
+    rho: array_like
+        :code:`chi_in_plane_total`, :math:`|S|`.
+    r2: array_like
+        :code:`chi_2_in_plane`, :math:`|v_2|`.
+    theta: array_like
+        :code:`phi_s2`, the angle of :math:`v_2` relative to :math:`S`.
+    mass_ratio: array_like
+        :math:`q = m_2 / m_1 \leq 1`.
+    xp: module, optional
+        The array namespace, inferred from the inputs if not given.
+
+    Returns
+    =======
+    chi_1_in_plane: array_like
+        :math:`|v_1|`.
+    phi_12: array_like
+        The azimuth of :math:`v_2` relative to :math:`v_1`, on
+        :math:`[0, 2\pi)`.
+    """
     xp = _xp.namespace(rho, r2, theta, mass_ratio, xp=xp)
     shape, (rho, r2, theta, mass_ratio), _ = _xp.as_float(xp, rho, r2, theta, mass_ratio)
     q2 = mass_ratio**2
@@ -950,7 +978,32 @@ def in_plane_from_total(rho, r2, theta, mass_ratio, xp=None):
 
 
 def total_from_in_plane(chi_1_in_plane, chi_2_in_plane, phi_12, mass_ratio, xp=None):
-    """Return (|S|, |v_2|, angle of v_2 relative to S) from the standard in-plane parameters."""
+    r"""
+    Return :math:`|S|`, :math:`|v_2|` and the angle of :math:`v_2` relative
+    to :math:`S` from the standard in-plane parameters, the inverse of
+    :func:`in_plane_from_total`.
+
+    Parameters
+    ==========
+    chi_1_in_plane, chi_2_in_plane: array_like
+        The in-plane spin magnitudes :math:`|v_1|` and :math:`|v_2|`.
+    phi_12: array_like
+        The azimuth of :math:`v_2` relative to :math:`v_1`.
+    mass_ratio: array_like
+        :math:`q = m_2 / m_1 \leq 1`.
+    xp: module, optional
+        The array namespace, inferred from the inputs if not given.
+
+    Returns
+    =======
+    chi_in_plane_total: array_like
+        :math:`|S| = |v_1 + q^2 v_2| / (1 + q^2)`.
+    chi_2_in_plane: array_like
+        :math:`|v_2|`, unchanged.
+    phi_s2: array_like
+        The angle of :math:`v_2` relative to :math:`S`, on
+        :math:`(-\pi, \pi]`.
+    """
     xp = _xp.namespace(chi_1_in_plane, chi_2_in_plane, phi_12, mass_ratio, xp=xp)
     shape, (chi_1_in_plane, chi_2_in_plane, phi_12, mass_ratio), _ = _xp.as_float(
         xp, chi_1_in_plane, chi_2_in_plane, phi_12, mass_ratio
@@ -1044,6 +1097,25 @@ class ChiInPlaneTotal(_TotalBase):
     in-plane spin :math:`S = (v_1 + q^2 v_2) / (1 + q^2)`, given the aligned
     spins and mass ratio, implied by uniform spin magnitudes and isotropic
     orientations.
+
+    The support is :math:`0 \leq |S| \leq (R_1 + q^2 R_2) / (1 + q^2)` with
+    :math:`R_i = \sqrt{a_{\max}^2 - \chi_i^2}`. The CDF is a quadrature over
+    :math:`|v_2|` of the closed-form probability that :math:`v_1` lies in a
+    disk, see :doc:`/implementation`.
+
+    Parameters
+    ==========
+    amax: float
+        The maximum spin magnitude.
+    name: str
+        The parameter name, :code:`chi_in_plane_total` by default.
+    latex_label, unit, boundary:
+        As for :code:`bilby.core.prior.Prior`.
+
+    Notes
+    =====
+    The required variables are :code:`chi_1`, :code:`chi_2` and
+    :code:`mass_ratio`.
     """
 
     _required = ["chi_1", "chi_2", "mass_ratio"]
@@ -1059,6 +1131,30 @@ class ChiInPlane2GivenTotal(_TotalBase):
     r"""
     Prior on the secondary in-plane spin magnitude :math:`|v_2|` given
     :math:`|S|`, the aligned spins and mass ratio.
+
+    .. math::
+
+        p(|v_2| \,|\, |S|) \propto \frac{|v_2|}{\chi_2^2 + |v_2|^2}
+        \int_{-\psi_c}^{\psi_c} \frac{d\psi}
+        {\chi_1^2 + a^2 + d^2 - 2 a d \cos\psi}
+
+    with :math:`a = (1 + q^2)|S|`, :math:`d = q^2|v_2|` and :math:`\psi_c`
+    the half-width of the arc of the circle :math:`|v_1 - d| = a` inside
+    :math:`|v_1| \leq \sqrt{a_{\max}^2 - \chi_1^2}`.
+
+    Parameters
+    ==========
+    amax: float
+        The maximum spin magnitude.
+    name: str
+        The parameter name, :code:`chi_2_in_plane` by default.
+    latex_label, unit, boundary:
+        As for :code:`bilby.core.prior.Prior`.
+
+    Notes
+    =====
+    The required variables are :code:`chi_in_plane_total`, :code:`chi_1`,
+    :code:`chi_2` and :code:`mass_ratio`.
     """
 
     _required = ["chi_in_plane_total", "chi_1", "chi_2", "mass_ratio"]
@@ -1079,7 +1175,22 @@ class PhiS2(_TotalBase):
 
         p(\theta) \propto \left(\chi_1^2 + |(1 + q^2) S - q^2 v_2|^2\right)^{-1}
 
-    on the arc where :math:`|v_1| \leq \sqrt{a_{\max}^2 - \chi_1^2}`.
+    on the arc where :math:`|v_1| \leq \sqrt{a_{\max}^2 - \chi_1^2}`. The CDF
+    and its inverse are closed form (arctangents).
+
+    Parameters
+    ==========
+    amax: float
+        The maximum spin magnitude.
+    name: str
+        The parameter name, :code:`phi_s2` by default.
+    latex_label, unit, boundary:
+        As for :code:`bilby.core.prior.Prior`.
+
+    Notes
+    =====
+    The required variables are :code:`chi_2_in_plane`,
+    :code:`chi_in_plane_total`, :code:`chi_1` and :code:`mass_ratio`.
     """
 
     _required = ["chi_2_in_plane", "chi_in_plane_total", "chi_1", "mass_ratio"]
@@ -1131,7 +1242,25 @@ class _InPlaneDelta(ConditionalDeltaFunction):
 
 
 class ChiInPlane1FromTotal(_InPlaneDelta):
-    """chi_1_in_plane = |(1 + q^2) S - q^2 v_2| as a conditional delta function."""
+    r"""
+    :code:`chi_1_in_plane`, :math:`|v_1| = |(1 + q^2) S - q^2 v_2|`, as a
+    conditional delta function (see :func:`in_plane_from_total`).
+
+    :code:`is_fixed` is :code:`False`, so bilby treats it as a search
+    parameter and passes its value to the likelihood.
+
+    Parameters
+    ==========
+    name: str
+        The parameter name, :code:`chi_1_in_plane` by default.
+    latex_label, unit, boundary:
+        As for :code:`bilby.core.prior.Prior`.
+
+    Notes
+    =====
+    The required variables are :code:`chi_in_plane_total`,
+    :code:`chi_2_in_plane`, :code:`phi_s2` and :code:`mass_ratio`.
+    """
 
     _index = 0
 
@@ -1140,7 +1269,22 @@ class ChiInPlane1FromTotal(_InPlaneDelta):
 
 
 class Phi12FromTotal(_InPlaneDelta):
-    """phi_12, the azimuth of v_2 relative to v_1, as a conditional delta function."""
+    r"""
+    :code:`phi_12`, the azimuth of :math:`v_2` relative to :math:`v_1`, as a
+    conditional delta function (see :func:`in_plane_from_total`).
+
+    Parameters
+    ==========
+    name: str
+        The parameter name, :code:`phi_12` by default.
+    latex_label, unit, boundary:
+        As for :code:`bilby.core.prior.Prior`.
+
+    Notes
+    =====
+    The required variables are :code:`chi_in_plane_total`,
+    :code:`chi_2_in_plane`, :code:`phi_s2` and :code:`mass_ratio`.
+    """
 
     _index = 1
 
@@ -1150,8 +1294,27 @@ class Phi12FromTotal(_InPlaneDelta):
 
 def total_in_plane_spin_priors(amax=AMAX):
     """
-    The priors replacing chi_1_in_plane, chi_2_in_plane and phi_12.
-    phi_jl stays uniform and plays the role of the azimuth of S.
+    The priors replacing :code:`chi_1_in_plane`, :code:`chi_2_in_plane` and
+    :code:`phi_12`. :code:`phi_jl` stays uniform and plays the role of the
+    azimuth of :math:`S`.
+
+    Add these to a :code:`bilby.core.prior.ConditionalPriorDict` that
+    already contains :code:`mass_ratio`, :code:`chi_1`, :code:`chi_2` and
+    :code:`phi_jl`, and does not contain :code:`phi_12`.
+
+    Parameters
+    ==========
+    amax: float
+        The maximum spin magnitude.
+
+    Returns
+    =======
+    dict
+        :code:`chi_in_plane_total` (:class:`ChiInPlaneTotal`),
+        :code:`chi_2_in_plane` (:class:`ChiInPlane2GivenTotal`),
+        :code:`phi_s2` (:class:`PhiS2`), :code:`chi_1_in_plane`
+        (:class:`ChiInPlane1FromTotal`) and :code:`phi_12`
+        (:class:`Phi12FromTotal`).
     """
     return dict(
         chi_in_plane_total=ChiInPlaneTotal(amax),

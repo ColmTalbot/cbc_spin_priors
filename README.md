@@ -4,6 +4,8 @@ Spin priors for compact binary coalescences in [bilby](https://git.ligo.org/lscs
 
 All of them reproduce spins with uniform magnitudes up to `amax` (default 0.99) and isotropic orientations. They differ only in which parameters the sampler sees.
 
+The documentation, including the derivations, is at https://colmtalbot.github.io/cbc_spin_priors/ and builds with `sphinx-build docs docs/_build/html` after `pip install ".[docs]"`.
+
 | module | priors | sampled parameters |
 |---|---|---|
 | `cbc_spin_priors.aligned` | `ChiEffQ`, `Chi2`, `Chi1` | χ_eff given q, χ₂ given (q, χ_eff); χ₁ is a conditional delta function |

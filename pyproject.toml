@@ -22,6 +22,8 @@ fast = ["numba"]
 test = ["pytest", "array_api_strict"]
 # examples/run_injection.py also needs lalsuite and dynesty
 examples = ["lalsuite", "dynesty", "matplotlib"]
+# sphinx-build docs docs/_build/html
+docs = ["sphinx", "furo"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

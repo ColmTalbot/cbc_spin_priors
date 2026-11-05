@@ -1,6 +1,6 @@
 """
 Set the spin priors of a :code:`bilby.gw.prior.BBHPriorDict` to one of the
-the parameterisations in :code:`SPINS`.
+parameterisations in :code:`SPINS`.
 
 - :code:`aligned`: :math:`\\chi_1, \\chi_2` with :code:`AlignedSpin`, in-plane
   spins with :code:`ConditionalChiInPlane`.
@@ -23,6 +23,7 @@ from .inplane import total_in_plane_spin_priors
 
 __all__ = ["SPINS", "set_spin_priors"]
 
+#: The parameterisations accepted by :func:`set_spin_priors`.
 SPINS = ("aligned", "effective", "spherical", "aligned_perp", "effective_perp")
 
 
@@ -45,7 +46,14 @@ def set_spin_priors(priors, spin, amax=AMAX, aligned=False):
 
     Returns
     =======
-    priors: the modified prior dict
+    priors: bilby.gw.prior.BBHPriorDict
+        The same prior dict, modified.
+
+    Raises
+    ======
+    ValueError
+        If :code:`spin` is not in :code:`SPINS`, or a :code:`_perp`
+        parameterisation is requested with :code:`aligned=True`.
     """
     # the "_perp" variants sample the in-plane spins as the total in-plane spin
     # and the secondary in-plane spin, see inplane.py
