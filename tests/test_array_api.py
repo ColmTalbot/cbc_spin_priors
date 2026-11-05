@@ -70,13 +70,13 @@ def asarray(xp, arr):
 
 def assert_matches_numba(actual, numba, reference, regular):
     """
-    Agreement with numba to RTOL for generic points. The hand-picked edge
-    cases (aligned spins below the floor CMIN or at the maximum, equal masses)
-    are ill-conditioned and numba, the numpy implementation and the generic
-    path in different libraries differ there at the 1e-9 level.
+    Agreement with numba (or numpy, without numba) to RTOL for generic
+    points. The hand-picked edge cases (aligned spins below the floor CMIN or
+    at the maximum, equal masses) are ill-conditioned and numba, the numpy
+    implementation and the generic path in different libraries differ there
+    at the 1e-9 level.
 
-    The numpy reference is skipped where it is not finite (it returns NaN for
-    the CDF at |S| = 0 with q = 1, unlike numba).
+    The numpy reference is skipped where it is not finite.
     """
     assert_close(actual[regular], numba[regular])
     assert_close(actual, numba, rtol=1e-7)
@@ -114,13 +114,13 @@ def regular(conditions):
 def test_total_matches_numba(xp, conditions, regular):
     chi_1, chi_2, mass_ratio, uu = conditions
     args = [asarray(xp, arr) for arr in (chi_1, chi_2, mass_ratio)]
-    rho = ipp.total_rescale(uu, chi_1, chi_2, mass_ratio, backend="numba")
+    rho = ipp.total_rescale(uu, chi_1, chi_2, mass_ratio, backend=ipp.BACKEND)
     actual = to_numpy(ipp.total_rescale(asarray(xp, uu), *args, backend="array_api"))
     assert_matches_numba(actual, rho, None, regular)
     # include points outside the support
     rho_eval = np.concatenate([rho, [-0.1, 1.5, 0.0]])
     full = [np.concatenate([arr, arr[:3]]) for arr in (chi_1, chi_2, mass_ratio)]
-    expected = ipp.total_cdf_pdf(rho_eval, *full, backend="numba")
+    expected = ipp.total_cdf_pdf(rho_eval, *full, backend=ipp.BACKEND)
     reference = ipp.total_cdf_pdf(rho_eval, *full, backend="numpy")
     actual = ipp.total_cdf_pdf(asarray(xp, rho_eval), *[asarray(xp, arr) for arr in full], backend="array_api")
     for a, b, c in zip(actual, expected, reference):
@@ -129,14 +129,14 @@ def test_total_matches_numba(xp, conditions, regular):
 
 def test_secondary_matches_numba(xp, conditions, regular):
     chi_1, chi_2, mass_ratio, uu = conditions
-    rho = ipp.total_rescale(uu, chi_1, chi_2, mass_ratio, backend="numba")
+    rho = ipp.total_rescale(uu, chi_1, chi_2, mass_ratio, backend=ipp.BACKEND)
     u2 = uu[::-1].copy()
-    r2 = ipp.secondary_rescale(u2, rho, chi_1, chi_2, mass_ratio, backend="numba")
+    r2 = ipp.secondary_rescale(u2, rho, chi_1, chi_2, mass_ratio, backend=ipp.BACKEND)
     args = [asarray(xp, arr) for arr in (rho, chi_1, chi_2, mass_ratio)]
     actual = to_numpy(ipp.secondary_rescale(asarray(xp, u2), *args, backend="array_api"))
     assert_matches_numba(actual, r2, None, regular)
     r2_eval = np.concatenate([r2[:-2], [0.0, AMAX]])
-    expected = ipp.secondary_cdf_pdf(r2_eval, rho, chi_1, chi_2, mass_ratio, backend="numba")
+    expected = ipp.secondary_cdf_pdf(r2_eval, rho, chi_1, chi_2, mass_ratio, backend=ipp.BACKEND)
     reference = ipp.secondary_cdf_pdf(r2_eval, rho, chi_1, chi_2, mass_ratio, backend="numpy")
     actual = ipp.secondary_cdf_pdf(asarray(xp, r2_eval), *args, backend="array_api")
     for a, b, c in zip(actual, expected, reference):
@@ -203,7 +203,8 @@ def test_chi_eff_matches_numba(xp):
     xx = np.concatenate([expected, [0.0, -AMAX, AMAX, 1.5, -1.5, 1e-12]])
     qq = np.concatenate([mass_ratio, mass_ratio[:6]])
     cdf, pdf = _aligned_xp.chi_eff_cdf_pdf(xp, asarray(xp, xx), asarray(xp, qq), AMAX)
-    assert_close(cdf, _chi_eff_cdf_vec(xx, qq, AMAX))
+    # absolute roundoff in the CDF near 0 differs between libraries
+    assert_close(cdf, _chi_eff_cdf_vec(xx, qq, AMAX), atol=1e-15)
     # the numpy density uses scipy's complex dilogarithm and a different closed form
     reference = ChiEffQ(AMAX, 0.05, 1.0).prob(xx, mass_ratio=qq)
     assert_close(pdf, reference, rtol=1e-9, atol=1e-12)
@@ -325,7 +326,7 @@ def test_jax_jit_and_grad():
     rho = jnp.asarray([0.2, 0.4])
     cdf_pdf = jax.jit(lambda rho: ipp.total_cdf_pdf(rho, *conditions))
     cdf, pdf = cdf_pdf(rho)
-    expected = ipp.total_cdf_pdf(np.asarray(rho), *[np.asarray(arr) for arr in conditions], backend="numba")
+    expected = ipp.total_cdf_pdf(np.asarray(rho), *[np.asarray(arr) for arr in conditions], backend=ipp.BACKEND)
     assert_close(cdf, expected[0])
     assert_close(pdf, expected[1])
     grad = jax.grad(lambda rho: ipp.total_cdf_pdf(rho, *conditions)[0].sum())(rho)
