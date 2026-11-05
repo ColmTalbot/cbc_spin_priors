@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cbc_spin_priors"
+version = "0.1.0"
+description = "Effective-spin and total in-plane spin priors for bilby"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{name = "Colm Talbot"}]
+# the array-API bilby (bilby.compat.utils)
+# array_api_compat detects the namespace for the generic array API path
+dependencies = ["bilby>=3.0.0", "numpy", "scipy", "array_api_compat>=1.11"]
+
+[project.optional-dependencies]
+# compiled kernels for the in-plane CDFs, much faster than the numpy fallback
+fast = ["numba"]
+# torch and jax are also exercised by the tests if installed
+test = ["pytest", "array_api_strict"]
+# examples/run_injection.py also needs lalsuite and dynesty
+examples = ["lalsuite", "dynesty", "matplotlib"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib"
